@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -9,26 +9,18 @@ import Button from './button/Button';
 import Loader from './loader/Loader';
 import Modal from './modal/Modal';
 
-class App extends Component {
-  state = {
-    inputValue: null,
-    images: [],
-    reqStatus: 'idle',
-    imagePage: 1,
-    openImgUrl: null,
-  };
+export default function App() {
+  const [inputValue, setInputValue] = useState(null);
+  const [images, setImages] = useState([]);
+  const [reqStatus, setReqStatus] = useState('idle');
+  const [imagePage, setImagePage] = useState(1);
+  const [openImgUrl, setOpenImgUrl] = useState(null);
 
-  async componentDidUpdate(_, prevState) {
-    const { inputValue, imagePage, images } = this.state;
+  useEffect(() => {
+    if (inputValue === null) return;
+    setReqStatus('loading');
 
-    if (
-      prevState.inputValue !== inputValue ||
-      prevState.imagePage !== imagePage
-    ) {
-      this.setState({
-        reqStatus: 'loading',
-      });
-
+    async function getImages() {
       try {
         const loadedImages = await fetchImages(inputValue, imagePage);
 
@@ -37,11 +29,8 @@ class App extends Component {
         }
 
         const newImagesArray = [...images, ...loadedImages];
-
-        this.setState({
-          images: newImagesArray,
-          reqStatus: 'idle',
-        });
+        setImages(newImagesArray);
+        setReqStatus('idle');
 
         if (imagePage > 1) {
           window.scrollTo({
@@ -51,61 +40,45 @@ class App extends Component {
         }
       } catch (error) {
         toast.error('There are not such images');
-        this.setState({
-          reqStatus: 'rejected',
-        });
+        setReqStatus('rejected');
       }
     }
-  }
+    getImages();
+  }, [inputValue, imagePage]);
 
-  handleFormSubmit = inputValue => {
-    this.setState({
-      inputValue,
-      imagePage: 1,
-      images: [],
-    });
+  const handleFormSubmit = inputValue => {
+    setInputValue(inputValue);
+    setImagePage(1);
+    setImages([]);
   };
 
-  onImageClick = bigImgUrl => {
-    this.setState({
-      openImgUrl: bigImgUrl,
-    });
+  const onImageClick = bigImgUrl => {
+    setOpenImgUrl(bigImgUrl);
   };
 
-  increseImagePage = () => {
-    this.setState(prevState => {
-      return {
-        imagePage: prevState.imagePage + 1,
-      };
-    });
+  const increseImagePage = () => {
+    setImagePage(prevState => prevState + 1);
   };
 
-  closeModal = () => {
-    this.setState({
-      openImgUrl: null,
-    });
+  const closeModal = () => {
+    setOpenImgUrl(null);
   };
 
-  render() {
-    const { images, reqStatus, openImgUrl } = this.state;
-    const showBtnLoadMore = reqStatus === 'idle' && images.length > 0;
+  const showBtnLoadMore = reqStatus === 'idle' && images.length > 0;
 
-    return (
-      <div>
-        <ToastContainer autoClose={2000} />
-        {reqStatus === 'loading' && <Loader />}
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        <ImageGallery images={images} onImgClick={this.onImageClick} />
+  return (
+    <div>
+      <ToastContainer autoClose={2000} />
+      {reqStatus === 'loading' && <Loader />}
+      <Searchbar onSubmit={handleFormSubmit} />
+      <ImageGallery images={images} onImgClick={onImageClick} />
 
-        {showBtnLoadMore && <Button onLoadMore={this.increseImagePage} />}
-        {openImgUrl && (
-          <Modal closeModal={this.closeModal}>
-            <img src={openImgUrl} alt="" />
-          </Modal>
-        )}
-      </div>
-    );
-  }
+      {showBtnLoadMore && <Button onLoadMore={increseImagePage} />}
+      {openImgUrl && (
+        <Modal closeModal={closeModal}>
+          <img src={openImgUrl} alt="" />
+        </Modal>
+      )}
+    </div>
+  );
 }
-
-export default App;
